@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .weather-block, .hourly-block {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            text-align: left;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+
+        .modal-content p {
+            color: #555;
+        }
+
+        .modal-content button {
+            padding: 10px 15px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .modal-content button:hover {
+            background-color: #1976D2;
+        }
+
+        .location-input {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .location-input input {
+            padding: 10px;
+            width: 50%;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .location-input button {
+            padding: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .location-input button:hover {
+            background-color: #1976D2;
+        }
+
+        #map {
+            height: 300px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .reset-button {
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .reset-button:hover {
+            background-color: #d32f2f;
+        }
+
+        /* Styles for the reset confirmation modal */
+        .reset-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        .reset-modal-content {
+            background-color: #ffffff;
+            margin: 20% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .reset-modal-content h2 {
+            color: #f44336;
+        }
+
+        .reset-modal-content button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Weather Dashboard</h1>
+        <div class="modal" id="setup-dialog">
+            <div class="modal-content">
+                <h2>Setup Your Location</h2>
+                <p>To provide you with accurate weather information, we need to know your location.</p>
+                <p>Please choose one of the following options:</p>
+                <button onclick="requestGeolocation()">Allow Geolocation</button>
+                <p>or</p>
+                <button onclick="toggleSetup()">Select Location on Map</button>
+            </div>
+        </div>
+        <div class="location-input" id="location-input" style="display: none;">
+            <input type="text" id="location" placeholder="Enter location (lat,long)">
+            <button onclick="fetchWeather()">Get Weather</button>
+            <button onclick="saveCoordinates()">Save Coordinates</button>
+        </div>
+        <div id="map"></div>
+        <div id="weather" class="weather-block">
+            <p>Fetching weather data...</p>
+        </div>
+        <div id="hourly-forecast" class="hourly-block">
+            <h2>Hourly Forecast</h2>
+            <div id="hourly-data">Loading hourly data...</div>
+        </div>
+        <button class="reset-button" onclick="openResetModal()">Reset</button>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="reset-modal" id="reset-modal">
+        <div class="reset-modal-content">
+            <h2>Confirm Reset</h2>
+            <p>Are you sure you want to reset your location?</p>
+            <button onclick="resetCoordinates()">Yes, Reset</button>
+            <button onclick="closeResetModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([51.505, -0.09], 2); // Default view
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+        let marker;
+        const isFirstSetup = !getCookie("location");
+
+        // Show setup dialog on first visit
+        if (isFirstSetup) {
+            document.getElementById('setup-dialog').style.display = 'block';
+        } else {
+            fetchWeatherFromCookie();
+        }
+
+        function toggleSetup() {
+            document.getElementById('setup-dialog').style.display = 'none';
+            document.getElementById('location-input').style.display = 'flex';
+            document.getElementById('map').style.display = 'block';
+        }
+
+        function requestGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const { latitude, longitude } = position.coords;
+                    saveLocationInCookie(latitude, longitude);
+                    document.getElementById('location').value = `${latitude},${longitude}`;
+                    fetchWeather();
+                }, error => {
+                    alert("Unable to retrieve your location. Please enter coordinates manually.");
+                    toggleSetup(); // Show the setup menu to enter coordinates manually
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        map.on('click', function(e) {
+            const lat = e.latlng.lat.toFixed(5);
+            const lon = e.latlng.lng.toFixed(5);
+
+            if (marker) {
+                map.removeLayer(marker);
+            }
+
+            marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup(`Coordinates: ${lat}, ${lon}`)
+                .openPopup();
+
+            document.getElementById('location').value = `${lat}, ${lon}`;
+        });
+
+        function fetchWeather() {
+            const locationInput = document.getElementById('location').value;
+            let apiURL;
+
+            if (locationInput) {
+                const [lat, lon] = locationInput.split(',');
+                apiURL = `https://api.open-meteo.com/v1/forecast?latitude=${lat.trim()}&longitude=${lon.trim()}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,pressure_msl,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,precipitation&timezone=auto`;
+            } else {
+                alert("Please enter valid coordinates.");
+                return;
+            }
+
+            fetch(apiURL)
+                .then(response => {
+                    if (!response.ok) throw new Error("Error fetching data");
+                    return response.json();
+                })
+                .then(data => {
+                    displayWeather(data);
+                    displayHourlyForecast(data);
+                })
+                .catch(error => {
+                    document.getElementById('weather').innerHTML = `<p>Unable to fetch weather data. Try again later.</p>`;
+                    console.error(error);
+                });
+        }
+
+        function displayWeather(data) {
+            const weatherContainer = document.getElementById('weather');
+
+            const temperature = data.current.temperature_2m;
+            const windSpeed = data.current.wind_speed_10m;
+            const windDirection = data.current.wind_direction_10m;
+            const isDay = data.current.is_day;
+            const precipitation = data.current.precipitation;
+
+            const dayNightIcon = isDay ? "☀️" : "🌙";
+
+            weatherContainer.innerHTML = `
+                <h2>${dayNightIcon} Current Weather</h2>
+                <p>Temperature: <span>${temperature}°C</span></p>
+                <p>Wind: <span>${windSpeed} km/h</span> ${getWindDirectionIcon(windDirection)}</p>
+                <p>Precipitation: <span>${precipitation} mm</span></p>
+            `;
+        }
+
+        function getWindDirectionIcon(degree) {
+            if (degree >= 0 && degree < 45) return "🌬️ N";
+            if (degree >= 45 && degree < 135) return "🌬️ E";
+            if (degree >= 135 && degree < 225) return "🌬️ S";
+            return "🌬️ W";
+        }
+
+        function displayHourlyForecast(data) {
+            const hourlyContainer = document.getElementById('hourly-data');
+            const hourlyData = data.hourly;
+
+            let hourlyHTML = '';
+
+            for (let i = 0; i < 6; i++) {
+                const time = new Date(hourlyData.time[i]);
+                const temperature = hourlyData.temperature_2m[i];
+                const humidity = hourlyData.relative_humidity_2m[i];
+                const precipitationProbability = hourlyData.precipitation_probability[i];
+
+                hourlyHTML += `
+                    <div class="hourly-info">
+                        <span class="icon">🕒</span>
+                        <p>${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p>Temp: <span>${temperature}°C</span></p>
+                        <p>Humidity: <span>${humidity}%</span></p>
+                        <p>Precipitation: <span>${precipitationProbability}%</span></p>
+                    </div>
+                `;
+            }
+
+            hourlyContainer.innerHTML = hourlyHTML;
+        }
+
+        function setCookie(name, value, days) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+        }
+
+        function getCookie(name) {
+            return document.cookie.split('; ').reduce((r, v) => {
+                const parts = v.split('=');
+                return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+            }, '');
+        }
+
+        function fetchWeatherFromCookie() {
+            const location = getCookie("location");
+            if (location) {
+                document.getElementById('location').value = location;
+                fetchWeather();
+            }
+        }
+
+        function saveLocationInCookie(lat, lon) {
+            setCookie("location", `${lat},${lon}`, 30);
+        }
+
+        function saveCoordinates() {
+            const locationInput = document.getElementById('location').value;
+            if (locationInput) {
+                const [lat, lon] = locationInput.split(',');
+                saveLocationInCookie(lat.trim(), lon.trim());
+                alert("Coordinates saved!");
+            } else {
+                alert("Please enter valid coordinates to save.");
+            }
+        }
+
+        function openResetModal() {
+            document.getElementById('reset-modal').style.display = 'block';
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').style.display = 'none';
+        }
+
+        function resetCoordinates() {
+            setCookie("location", "", -1); // Delete the cookie
+            alert("Location has been reset.");
+            closeResetModal(); // Close modal
+            location.reload(); // Reload the page
+        }
+    </script>
+</body>
+</html>
