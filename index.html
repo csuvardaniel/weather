@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Dashboard</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@latest/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@latest/dist/leaflet.js"></script>
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -40,7 +41,7 @@
         }
 
         /* Modal styles */
-        .modal {
+        .modal, .reset-modal {
             display: none;
             position: fixed;
             z-index: 1000;
@@ -48,32 +49,29 @@
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
             background-color: rgba(0, 0, 0, 0.7);
         }
 
-        .modal-content {
+        .modal-content, .reset-modal-content {
             background-color: #ffffff;
             margin: 10% auto;
             padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 400px;
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            width: 80%;
+            max-width: 400px;
             text-align: left;
         }
 
-        .modal-content h2 {
-            margin-top: 0;
+        .modal-content h2, .reset-modal-content h2 {
             color: #2196F3;
         }
 
-        .modal-content p {
+        .modal-content p, .reset-modal-content p {
             color: #555;
         }
 
-        .modal-content button {
+        .modal-content button, .reset-modal-content button {
             padding: 10px 15px;
             background-color: #2196F3;
             color: white;
@@ -83,7 +81,7 @@
             margin-top: 10px;
         }
 
-        .modal-content button:hover {
+        .modal-content button:hover, .reset-modal-content button:hover {
             background-color: #1976D2;
         }
 
@@ -137,37 +135,6 @@
         .reset-button:hover {
             background-color: #d32f2f;
         }
-
-        /* Styles for the reset confirmation modal */
-        .reset-modal {
-            display: none;
-            position: fixed;
-            z-index: 1001;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-        }
-
-        .reset-modal-content {
-            background-color: #ffffff;
-            margin: 20% auto;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            width: 80%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .reset-modal-content h2 {
-            color: #f44336;
-        }
-
-        .reset-modal-content button {
-            margin: 5px;
-        }
     </style>
 </head>
 <body>
@@ -209,7 +176,6 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
         const map = L.map('map').setView([51.505, -0.09], 2); // Default view
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
